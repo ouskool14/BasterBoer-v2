@@ -12,7 +12,8 @@ public partial class GrassSpawner : Node3D
 	// ── Inspector fields ────────────────────────────────────────────────────
 
 	[Export] public MultiMeshInstance3D MultiMeshNode;   // Drag your MultiMeshInstance3D here
-	[Export] public Mesh GrassMesh;                      // Drag your grass .glb mesh here
+	[Export] public Mesh GrassMesh;                      // Drag a mesh here (optional if GrassScene is set)
+	[Export] public PackedScene GrassScene;              // Backwards compatibility for existing scenes
 
 	[ExportGroup("Patch shape")]
 	[Export] public Vector2 PatchSize   = new(40f, 40f); // Width/depth of the grass area in metres
@@ -48,13 +49,18 @@ public partial class GrassSpawner : Node3D
 
 	public override void _Ready()
 	{
+		if (GrassMesh == null && GrassScene != null)
+			GrassMesh = ExtractMeshFromScene(GrassScene);
+
 		if (MultiMeshNode == null || GrassMesh == null)
 		{
-			GD.PrintErr("GrassSpawner: assign MultiMeshNode and GrassMesh in the Inspector.");
+			GD.PrintErr("GrassSpawner: assign MultiMeshNode and either GrassMesh or GrassScene in the Inspector.");
 			return;
 		}
 
-		Spawn();
+		// Terrain generates its collision shapes via call_deferred on the next frame.
+		// Jolt needs another physics frame to build the shapes. 0.1s is safe.
+		GetTree().CreateTimer(0.1f).Connect(SceneTreeTimer.SignalName.Timeout, Callable.From(Spawn));
 	}
 
 	// ── Public API — call these from FloraSystem or chunk loader ───────────
@@ -135,6 +141,32 @@ public partial class GrassSpawner : Node3D
 	}
 
 	// ── Private helpers ────────────────────────────────────────────────────
+
+	private static Mesh ExtractMeshFromScene(PackedScene scene)
+	{
+		if (scene == null)
+			return null;
+
+		Node instance = scene.Instantiate();
+		Mesh mesh = FindFirstMesh(instance);
+		instance.QueueFree();
+		return mesh;
+	}
+
+	private static Mesh FindFirstMesh(Node node)
+	{
+		if (node is MeshInstance3D meshInstance && meshInstance.Mesh != null)
+			return meshInstance.Mesh;
+
+		foreach (Node child in node.GetChildren())
+		{
+			Mesh mesh = FindFirstMesh(child);
+			if (mesh != null)
+				return mesh;
+		}
+
+		return null;
+	}
 
 	private Vector3 SamplePosition()
 	{

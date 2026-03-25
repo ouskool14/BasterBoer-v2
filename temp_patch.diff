@@ -1,0 +1,59 @@
+diff --git a/GrassSpawner.cs b/GrassSpawner.cs
+--- a/GrassSpawner.cs
++++ b/GrassSpawner.cs
+@@ -11,8 +11,9 @@
+ 	// ── Inspector fields ────────────────────────────────────────────────────
+ 
+ 	[Export] public MultiMeshInstance3D MultiMeshNode;   // Drag your MultiMeshInstance3D here
+-	[Export] public Mesh GrassMesh;                      // Drag your grass .glb mesh here
++	[Export] public Mesh GrassMesh;                      // Drag a mesh here (optional if GrassScene is set)
++	[Export] public PackedScene GrassScene;              // Backwards compatibility for existing scenes
+ 
+ 	[ExportGroup("Patch shape")]
+ 	[Export] public Vector2 PatchSize   = new(40f, 40f); // Width/depth of the grass area in metres
+@@ -45,10 +46,13 @@
+ 
+ 	public override void _Ready()
+ 	{
+-		if (MultiMeshNode == null || GrassMesh == null)
++		if (GrassMesh == null && GrassScene != null)
++			GrassMesh = ExtractMeshFromScene(GrassScene);
++
++		if (MultiMeshNode == null || GrassMesh == null)
+ 		{
+-			GD.PrintErr("GrassSpawner: assign MultiMeshNode and GrassMesh in the Inspector.");
++			GD.PrintErr("GrassSpawner: assign MultiMeshNode and either GrassMesh or GrassScene in the Inspector.");
+ 			return;
+ 		}
+ 
+@@ -131,6 +135,23 @@
+ 
+ 	// ── Private helpers ────────────────────────────────────────────────────
+ 
++	private static Mesh ExtractMeshFromScene(PackedScene scene)
++	{
++		if (scene == null)
++			return null;
++
++		Node instance = scene.Instantiate();
++		Mesh mesh = FindFirstMesh(instance);
++		instance.QueueFree();
++		return mesh;
++	}
++
++	private static Mesh FindFirstMesh(Node node)
++	{
++		if (node is MeshInstance3D meshInstance && meshInstance.Mesh != null)
++			return meshInstance.Mesh;
++
++		foreach (Node child in node.GetChildren())
++		{
++			Mesh mesh = FindFirstMesh(child);
++			if (mesh != null)
++				return mesh;
++		}
++
++		return null;
++	}
++
+ 	private Vector3 SamplePosition()

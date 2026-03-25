@@ -50,5 +50,9 @@ KuduScene = ExtResource("5_kudu")
 script = ExtResource("6_grass")
 MultiMeshNode = NodePath("MultiMeshInstance3D")
 GrassScene = ExtResource("7_grass_scene")
+PatchSize = Vector2(500, 500)
+InstanceCount = 100000
+RaycastFrom = 50.0
 
 [node name="MultiMeshInstance3D" type="MultiMeshInstance3D" parent="GrassSpawner" unique_id=2000000001]
+cast_shadow = 0
