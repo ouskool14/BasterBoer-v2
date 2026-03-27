@@ -20,7 +20,7 @@ The player may choose to:
 - Run an intensive game breeding operation on 300 hectares
 - Operate a photographic safari lodge on 10,000 hectares in Limpopo
 - Farm sheep and manage jackal pressure on 50,000 hectares in the Northern Cape
-- Offer trophy hunting to international clients in the Waterberg
+- Offer trophy hunting to international clients
 - Build a conservation-focused reserve with research partnerships and anti-poaching units
 - Or any combination of the above
 
@@ -31,24 +31,21 @@ All of these are equally valid. None is "the correct way to play."
 ## 3. CORE DESIGN PHILOSOPHY
 
 ### 3.1 The Land Defines the Game
-The player's starting land — its size, location, terrain, rainfall, and soil — is the primary shaper of their experience. A small plot demands intensity, attention to detail, and high yield per hectare. A large tract demands patience, strategic thinking, and working with nature rather than against it. The land is not a backdrop. It is a character.
+The player's land — its size, location, terrain, rainfall, and soil — is the primary shaper of their experience. A small plot demands intensity, attention to detail, and high yield per hectare. A large tract demands patience, strategic thinking, and working with nature rather than against it. The land is not a backdrop. It is a character. There will be some storyline arc built in later versions, so a player might start with less and need to farm well to grow in size or quantity.
 
 ### 3.2 No Win Condition — Only Consequence
-There are no achievement trees to complete. No unlock-all-items endgame. The game measures nothing except what the player chooses to care about. A player who keeps a small herd of cattle alive through three years of drought has won something profound. A player who builds an internationally recognised reserve has won something else. Both are valid. Neither is scored.
+There are no achievement trees to complete. No unlock-all-items endgame. The game measures nothing except what the player chooses to care about. A player who keeps a small herd of cattle alive through three years of drought has won something profound. A player who builds an internationally recognised reserve has won something else. Both are valid. Neither is scored. The player can choose to play the game in a way that is not focused on profit, but rather on conservation and the well-being of the animals. The only limitations are the same of the real world, such as money, time, and the environment.
 
 ### 3.3 Emergent Complexity
 Simple systems must interact to create complex, unpredictable situations. The weather affects the grass. The grass affects the animals. The animals affect the ecology. The ecology affects income. Income affects decisions. Decisions affect relationships — with staff, community, government, and the land itself. The player should never feel like they are managing a spreadsheet. They should feel like they are managing a *place*.
 
-### 3.4 Authenticity Over Abstraction
-This game is set in a specific country, with specific animals, specific legislation, specific cultural tensions, and specific landscapes. That specificity is the game's identity. South African conservation realities — PHASA-compliant hunting quotas, DFFE regulations, community land rights, drought cycles, load shedding, poaching pressure — are not background flavour. They are mechanics.
-
-### 3.5 Non-Linear Growth
+### 3.4 Non-Linear Growth
 The player should always feel that expansion is *possible*, never that it is *required*. A perfectly managed small operation is a complete game. But the option to purchase adjacent land, drop fences, merge ecosystems, and take on new challenges must always exist. Growth comes with cost and consequence — new land means new problems.
 
-### 3.6 Becoming, Not Managing
+### 3.5 Becoming, Not Managing
 The player is not a faceless manager clicking through menus. They are a person with a history, a love for Africa, and a grand vision that is bigger than their current means. The game is about the gap between that vision and reality — and the slow, satisfying process of closing it. Every system should serve this emotional truth.
 
-### 3.7 One Difficulty — Reality
+### 3.6 One Difficulty — Reality
 There is no difficulty setting. There is no easy mode, normal mode, or hard mode. There is one mode: Africa. The game is difficult because real land ownership and management is difficult. Players who want a gentle experience will find it in other games. Players who survive the learning curve of BasterBoer become its most devoted advocates, because what they built was genuinely hard to build.
 
 The difficulty is managed through the origin story and apprentice phase — which gives players context and foundation before handing them full responsibility — not through mechanical handicaps or slider settings. The game respects its players enough to be honest with them from the first hour.
@@ -60,7 +57,6 @@ The difficulty is managed through the origin story and apprentice phase — whic
 - **Not a toy.** The game treats its subject matter seriously. Conservation, hunting, community relations, and land management are complex, morally layered topics. The game does not sanitise them.
 - **Not punishing.** Difficulty comes from complexity, not cruelty. The game creates pressure through systems, not arbitrary events designed to frustrate.
 - **Grounded and beautiful.** Visually and aurally, the game should evoke the real African bush — golden light, red dust, silence broken by bird calls and distant thunder. The aesthetic serves immersion, not spectacle.
-- **Stories emerge, they are not scripted.** The game does not tell the player a story. The player lives one.
 
 ---
 
@@ -70,7 +66,7 @@ The difficulty is managed through the origin story and apprentice phase — whic
 The foundation. Grass, water, soil, fire, invasive species, erosion, and biodiversity all interact. The land is alive and will degrade or recover based on what the player does and does not do. Weather systems — drought, flood, heat wave, frost — create unpredictable pressure.
 
 **Rivers and Dams**
-Rivers and dams are fixed landscape features — the player does not divert rivers or excavate new dams, but they live with what they have and manage it carefully. Both scale dynamically between full and empty based on rainfall, season, and drought state. A river running strong in February may be cracked clay by September in a drought year. A dam at 12% capacity after three dry years is one of the most visceral read-outs of how the farm is doing — no number required, the player sees it. Player interaction with water is through infrastructure: pump placement, pipeline from dam to trough, borehole drilling, irrigation channels. The water itself is a given. What you do with it is the choice.
+Both scale dynamically between full and empty based on rainfall, season, and drought state. A river running strong in February may be cracked clay by September in a drought year. A dam at 12% capacity after three dry years is one of the most visceral read-outs of how the farm is doing — no number required, the player sees it. Player interaction with water is through infrastructure: pump placement, pipeline from dam to trough, borehole drilling, irrigation channels. The water itself is a given. What you do with it is the choice.
 
 **Seasonal Fire Management**
 Fire is one of the most important and skilled land management tools in the bushveld. Controlled burns — done correctly, in the right month, with the right wind conditions and prepared firebreaks — reset the veld, improve spring grazing, and reduce the standing fuel load that makes uncontrolled fires catastrophic. A player who burns their eastern block correctly in late August gets measurably better grass coverage in October. A player who does not manage their firebreaks risks losing that block entirely when a lightning strike or a spark from a vehicle exhaust catches the dry September veld.
@@ -120,6 +116,9 @@ Leopard are not driven past a blind. They are hunted on bait. The player selects
 **Hunting and the Ecology**
 Hunting is not separate from the ecological system. Offtake is managed against the carrying capacity and breeding rates of each species. A player who over-hunts a species degrades the population and their own future revenue. PHASA-compliant quotas apply. A well-managed hunting operation is sustainable over decades. A poorly managed one collapses within a few years.
 
+**Taxidermy**
+The player can have the animals that are hunted mounted by a taxidermist. The taxidermist will charge a fee for the mounting of the animal. The player can choose to have the animal mounted in a variety of poses. The player can also choose to have the animal mounted in a variety of locations. Most likely within his own home / stoep or lodge.
+
 ### Pillar 7: Building and Place
 The player builds two things in BasterBoer: the working infrastructure of the farm, and the home they live in.
 
@@ -136,11 +135,6 @@ For multi-day operations deep in the farm — capture work, fence repair in a re
 Music playing in the bakkie (Leon Schuster, Bok van Blerk, etc.) and when you get out of the bakkie, it still plays but the further you get away the softer it is. The player should have a home where they can light a boma fire. Staff quarters are separate from the homestead. The player can have a dog. Farm animals near the home. Everything should feel modular and organic — staff numbers can grow over time through family or arrivals if not managed. Animal sounds in the distance: chickens crowing at dawn, lions calling at dusk if you have them. The world is always on, always breathing.
 
 **The Player Character Has No Survival Bars.** There is no hunger meter, no thirst meter, no sleep counter. The player is not managing their own survival — they are managing a farm. Fatigue, hunger, and rest are part of the world's texture (the character sits at the fire at night, the day ends, time passes) but they are never numerical constraints on what the player can do. The complexity of this game comes from the land and its systems, not from personal survival mechanics.
-
-    Random standouts:
-        - To move a buffalo if you are poor, place a large piece of conveyor belt rubber under the buffalo and drag it with a bakkie, have someone sit on the buffalo so it doesn't fall off.
-        - Getting the bakkie stuck in a vlei in the wet season. Someone has to come pull you out.
-        - Sitting in a leopard hide at last light. The bush going quiet. Waiting.
 
 ---
 
@@ -216,7 +210,7 @@ When the apprentice phase ends, the player acquires their first piece of land �
 
 ---
 
-## 9. REFERENCE GAMES (Tone and Mechanic Inspiration)
+## 9. REFERENCE GAMES (Tone and Mechanic Inspiration) - AI ignore this section
 
 These games are referenced not to be copied, but to illustrate the *feeling* the player should have:
 
@@ -241,7 +235,8 @@ These games are referenced not to be copied, but to illustrate the *feeling* the
 - **Engine:** Godot 4.6
 - **Language:** C# (.NET) — chosen for CPU performance at scale. Simulation systems (AnimalSystem, BreedingSystem, FloraSystem, WorldMap chunk generation) are written in C#. UI and event-driven systems may remain in GDScript where practical. Both languages coexist in the same project.
 - **Visual Style:** Low poly 3D — stylised, not realistic. Clean geometry, warm colour palette, strong silhouettes. The aesthetic should read immediately as Africa without trying to photograph it. Think rolling terrain with flat-shaded meshes, low-poly acacia trees, animals with clear readable shapes. Beauty comes from light and colour, not polygon count.
-- **Perspective:** 3D world with a dual-mode camera — third-person ground level when moving through the farm, overhead strategic view when planning. The Vision Board is the natural transition point between these two modes.
+- **Visual Style Again:** Emphasis is placed on the visual style as trying to model realistic animals will never look as good as the real thing. Low poly animals will be more performant and easier to animate - more importantly be easy on the eye. Animals between 500 to 750 tris. Nothing should look realistic, but it should all look stylized and intentional. 
+- **Perspective:** 3D world with a dual-mode camera — third-person ground level when moving through the farm, overhead strategic view when planning. The Holographic Vision Board in the players home is a top down view.
 - **Architecture:** Singleton-based (`GameState` as central data store), modular systems (AnimalSystem, EconomySystem, EventSystem, etc.), signal-driven communication between systems
 - **Animal Model:** Herd instinct architecture. Each herd runs one C# brain (thirst, hunger, fatigue, fear, awareness). Individual animals are rendered as separate meshes following the herd state with natural variation. No individual AI per animal except for solitary species. See Section 13 for full detail.
 - **Currency:** South African Rand (ZAR)
@@ -353,8 +348,8 @@ Every herd of social animals has a single shared brain that drives all behaviour
 - **Hunger** — rises when grass coverage in current zone is low, triggers movement to better grazing
 - **Fatigue** — rises with movement and heat, triggers rest behaviour during midday and night
 - **Fear level** — spikes when a predator is detected (sight, sound, or scent depending on wind), triggers flight response
-- **Awareness radius** — varies by species; impala are extremely alert, buffalo less so
-- **Current state** — one of: Grazing, Moving, Drinking, Resting, Fleeing, Alerting
+- **Anxiety radius** — varies by species; impala are extremely alert, buffalo less so, but all animals are impacted by recent hunting
+- **Current state** — one of: Grazing / hunting, Moving, Drinking, Resting, Fleeing, Alerting, Breeding
 
 The brain makes one decision. All animals in the herd execute it.
 
@@ -482,7 +477,7 @@ The `WorldChunkStreamer` is the gatekeeper for all visual content in the 3D worl
 | Individual animal meshes rendered | < 300 simultaneously |
 | Active particle systems (fire, insects, ambient) | < 8 simultaneously |
 | Active 3D audio sources | < 12 |
-| RAM usage during gameplay | < 1.5 GB |
+| RAM usage during gameplay | < 4 GB |
 | Chunk load time | < 80ms (background thread) |
 | Monthly simulation tick (all systems) | < 20ms total |
 
