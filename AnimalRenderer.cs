@@ -396,7 +396,12 @@ public partial class AnimalRenderer : Node3D
 				// Mark this animal as visible
 				visibleAnimalUids.Add(animals[i].UniqueId);
 
-				transforms.Add(new Transform3D(herdBasis, worldPos));
+				// Get terrain-aligned basis for this animal's position
+				// Note: We could optimize by computing this once per herd since animals in a herd
+				// are close enough that sharing a basis is visually indistinguishable
+				Basis finalBasis = GetTerrainAlignedBasis(worldPos.X, worldPos.Z, herdState.RenderYaw);
+
+				transforms.Add(new Transform3D(finalBasis, worldPos));
 			}
 		}
 
@@ -470,6 +475,33 @@ public partial class AnimalRenderer : Node3D
 		{
 			_animalRenderStates.Remove(uid);
 		}
+	}
+
+	/// <summary>
+	/// Gets a terrain-aligned basis for the given position and yaw.
+	/// Samples the heightmap at small offsets to estimate the terrain normal.
+	/// </summary>
+	/// <param name="x">World X position</param>
+	/// <param name="z">World Z position</param>
+	/// <param name="yaw">Yaw angle in radians</param>
+	/// <returns>Basis aligned with terrain normal and rotated by yaw</returns>
+	private Basis GetTerrainAlignedBasis(float x, float z, float yaw)
+	{
+		const float sampleOffset = 0.5f; // metres
+
+		float hCenter = TerrainQuery.GetHeight(x, z);
+		float hRight  = TerrainQuery.GetHeight(x + sampleOffset, z);
+		float hForward= TerrainQuery.GetHeight(x, z + sampleOffset);
+
+		Vector3 right   = new Vector3(sampleOffset, hRight   - hCenter, 0f).Normalized();
+		Vector3 forward = new Vector3(0f,           hForward - hCenter, sampleOffset).Normalized();
+		Vector3 up      = right.Cross(forward).Normalized();
+
+		// Yaw rotation around terrain-derived up vector
+		Basis terrainBasis = new Basis(right, up, -forward);
+		Basis yawBasis     = new Basis(Vector3.Up, yaw);
+
+		return terrainBasis * yawBasis;
 	}
 }
 

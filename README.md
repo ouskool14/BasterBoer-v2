@@ -1,14 +1,49 @@
+## 🤖 For AI Assistants
+ 
+> If you are an AI agent working on this project, read this section before anything else. It will save you from the most common mistakes.
+ 
+**Read in this order:**
+1. This section (you're here)
+2. `docs/ARCHITECTURE.md` — binding technical rules, system map, LOD tables, performance budget
+3. `docs/EXTENDING.md` — how to add features safely without breaking existing systems
+4. `GAME_VISION v0.6.md` — full design document (use the TL;DR at the top; read the rest only if your task requires it)
+ 
+**The three rules you must internalise before writing a single line:**
+ 
+**Rule 1 — Simulate vs Render.**
+Every system has two layers: a C# data layer that is always alive (no scene nodes), and a render layer that only exists near the player. Never instantiate scene nodes from simulation code (`AnimalSystem`, `FloraSystem`, `HerdBrain`, `EconomySystem`, `TimeSystem`). That is the render layer's job exclusively.
+ 
+**Rule 2 — Herds think collectively.**
+`HerdBrain` makes one decision. All animals in the herd execute it with variation. Do not give individual `AnimalStruct` members their own state machines, pathfinding, or per-frame decision logic. The variation (speed offsets, spread radius, reaction lag, animation timing) is produced by timer-based math using each animal's ID — not per-frame RNG, not individual AI. This is non-negotiable for both performance and biological authenticity.
+ 
+**Rule 3 — Instancing is not optional.**
+Any object appearing more than once uses `MultiMeshInstance3D`. One mesh per species, with shader parameters for variation. Unique meshes per animal/tree/rock will blow the draw call budget immediately.
+ 
+**Key singletons (all use `.Instance`):**
+`AnimalSystem` · `GameState` · `WaterSystem` · `WorldChunkStreamer` · `FenceSystem` · `TimeSystem`
+ 
+**File location note:**
+C# simulation scripts currently live in the **project root**, not in a `Scripts/` subfolder. GDScript files also live at root level. The `docs/` folder contains markdown only. `Assets/` contains GLBs. `Scenes/` contains `.tscn` files.
+ 
+**Namespace note:**
+Simulation classes use `LandManagementSim.Simulation` (e.g. `HerdBrain`). Core systems use `BasterBoer.Core` and `BasterBoer.Core.Systems`. Do not introduce a third namespace without flagging it.
+ 
+**Performance budget (do not exceed):**
+Draw calls < 300 · Animal meshes rendered < 300 · Herds at full AI < 8 · RAM < 1.5 GB · Monthly sim tick < 20ms
+ 
+**When in doubt:** extend, don't rewrite. Ask for clarification rather than making assumptions about intent.
+
 # BasterBoer
 
-> *"You are a South African landowner — build, manage, and protect a piece of Africa on your own terms, where every decision has a consequence and no two playthroughs look the same."*
+> *"The player is a South African landowner — build, manage, and protect a piece of Africa on his own terms, where every decision has a consequence and no two playthroughs look the same."*
 
-**BasterBoer** is an open-ended, consequence-driven land management simulation set in South Africa. Manage a game farm, breed wildlife, host trophy hunts, run a safari lodge, fight drought and poaching — or do all of it at once. There is no win condition. There is only the land, and what you make of it.
+**BasterBoer** is an open-ended, consequence-driven land management simulation set in South Africa. The player manages a game farm, breeds wildlife, hosts trophy hunts, runs a safari lodge, fights drought and poaching — or do all of it at once. There is no win condition. There is only the land, and what the player makes of it.
 
 ---
 
 ## 🌍 What Is This Game?
 
-The player acquires a piece of land — a farm, a game reserve, a smallholding, or a vast wilderness tract — and manages it across time. You might:
+The player acquires a piece of land — a farm, a game reserve, a smallholding, or a vast wilderness tract — and manages it across time. The player might:
 
 - Run a game breeding operation on 300 hectares
 - Operate a photographic safari lodge on 10,000 hectares in Limpopo
@@ -43,26 +78,6 @@ All paths are equally valid. None is "the correct way to play."
 - **Architecture:** Data-Oriented Design. Simulate everything, render only what's near the player.
 
 For the full technical architecture, LOD system, performance budgets, and coding rules, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
-
----
-
-## 🚀 Getting Started
-
-1. Install **Godot 4.6** with .NET support from [godotengine.org](https://godotengine.org/)
-2. Clone this repository
-3. Open Godot → **Import** → select `project.godot`
-4. Press **F5** to run
-
-### Controls
-
-| Key | Action |
-|-----|--------|
-| `W / A / S / D` | Move |
-| `Space` | Jump |
-| `Shift` | Sprint |
-| `E` | Interact |
-| `Mouse` | Look around |
-| `Esc` | Toggle mouse cursor |
 
 ---
 

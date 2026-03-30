@@ -1,3 +1,44 @@
+> ⚠️ **AI AGENTS: Read this TL;DR block first. The full document below is for humans and deep context — skip it unless a specific question requires it.**
+ 
+---
+ 
+## TL;DR — AI Quick Reference
+ 
+**Genre:** Open-ended land management simulation. South Africa. No win condition.
+ 
+**North Star:** *"The player is a South African landowner — build, manage, and protect a piece of Africa on his own terms, where every decision has a consequence and no two playthroughs look the same."*
+ 
+**Core Loop:**
+- Player holds a vision for what their farm could become
+- They go out onto the farm and close the gap between that vision and reality
+- The land pushes back (drought, disease, poaching, finances, staff, time)
+- Seasons close. The farm evolves. No ending.
+ 
+**What the player manages:** Land & ecology · Animals · Economy (ZAR) · Staff & community · Hunting · Building
+ 
+**What this game is NOT:**
+- Not a survival game (no hunger/thirst bars for the player character)
+- Not Planet Zoo (animal welfare is a consideration, not the entire game)
+- Not a city builder (no zoning grids, no civic systems)
+- Not linear (no campaign, no story to finish, no final boss)
+- Not easy (one difficulty: reality — no sliders, no beginner mode)
+ 
+**Engine:** Godot 4.6 · **Language:** C# for simulation, GDScript for UI/events · **Style:** Low-poly 3D
+ 
+**Single most important technical rule:**
+> Everything in the world is simulated at all times. Only what is near the player is rendered.
+ 
+**Single most important animal architecture rule:**
+> Animals think collectively (one `HerdBrain` per herd), not individually. Do NOT give individual animals their own AI state machines. This is both the performance model and the correct biological model.
+ 
+**Currency:** South African Rand (ZAR) · **Starting year:** 2024
+ 
+---
+ 
+*Full design document follows. Sections 1–8 cover vision and philosophy. Sections 9-12 cover technical architecture, performance, and player experience design.*
+ 
+---
+
 # GAME VISION DOCUMENT
 ## Project: BasterBoer (Working Title)
 ### Version 0.6 — Master Reference for All Contributors
@@ -210,27 +251,7 @@ When the apprentice phase ends, the player acquires their first piece of land �
 
 ---
 
-## 9. REFERENCE GAMES (Tone and Mechanic Inspiration) - AI ignore this section
-
-These games are referenced not to be copied, but to illustrate the *feeling* the player should have:
-
-| Game | What to Borrow |
-|------|----------------|
-| **Banished** | Organic, consequence-driven growth; no winning, only surviving and thriving |
-| **Cities: Skylines / SimCity** | Freedom to build and shape; systems that interact at scale |
-| **Civilization series** | Long-arc decision making; the world changes around you |
-| **Factorio** | Deeply interlocking systems; the satisfaction of optimisation |
-| **Dungeon Keeper 2 / Black & White 2** | Personality and tone; the world reacts to your character |
-| **Age of Empires** | Resource management under pressure; the feeling of building something real |
-| **Subnautica** | Exploration and discovery within a living world; atmosphere above all |
-| **Ranch Simulator** | Physical presence on the land; driving, doing, being there — the proof that this audience exists and wants more depth than Ranch Simulator gives them |
-| **theHunter: Call of the Wild** | The gold standard for African bush atmosphere and sound design; proves the setting sells internationally; BasterBoer gives its players the reserve to own, not just visit |
-| **Farm Manager series** | The failure case — what happens when farming simulation has no emergent complexity, no consequence depth, and no challenge. BasterBoer is the game Farm Manager players wish they were playing |
-| **The Sims** | The emotional relationship between a player and a home they built themselves; the satisfaction of a personalised space that feels like theirs |
-
----
-
-## 10. TECHNICAL FOUNDATION
+## 9. TECHNICAL FOUNDATION
 
 - **Engine:** Godot 4.6
 - **Language:** C# (.NET) — chosen for CPU performance at scale. Simulation systems (AnimalSystem, BreedingSystem, FloraSystem, WorldMap chunk generation) are written in C#. UI and event-driven systems may remain in GDScript where practical. Both languages coexist in the same project.
@@ -238,7 +259,7 @@ These games are referenced not to be copied, but to illustrate the *feeling* the
 - **Visual Style Again:** Emphasis is placed on the visual style as trying to model realistic animals will never look as good as the real thing. Low poly animals will be more performant and easier to animate - more importantly be easy on the eye. Animals between 500 to 750 tris. Nothing should look realistic, but it should all look stylized and intentional. 
 - **Perspective:** 3D world with a dual-mode camera — third-person ground level when moving through the farm, overhead strategic view when planning. The Holographic Vision Board in the players home is a top down view.
 - **Architecture:** Singleton-based (`GameState` as central data store), modular systems (AnimalSystem, EconomySystem, EventSystem, etc.), signal-driven communication between systems
-- **Animal Model:** Herd instinct architecture. Each herd runs one C# brain (thirst, hunger, fatigue, fear, awareness). Individual animals are rendered as separate meshes following the herd state with natural variation. No individual AI per animal except for solitary species. See Section 13 for full detail.
+- **Animal Model:** Herd instinct architecture. Each herd runs one C# brain (thirst, hunger, fatigue, fear, awareness). Individual animals are rendered as separate meshes following the herd state with natural variation. No individual AI per animal except for solitary species. See Section 12 for full detail.
 - **Currency:** South African Rand (ZAR)
 - **Starting Year:** 2024
 - **Save System:** JSON-based, full state serialisation
@@ -254,7 +275,7 @@ Colour and light carry the emotional weight. Dawn light, midday heat, the golden
 
 ---
 
-## 11. CURRENT DEVELOPMENT STATE
+## 10. CURRENT DEVELOPMENT STATE
 
 Version 0.3 (logic layer) + early 3D prototype. Systems scaffolded in GDScript:
 - GameState (central data store)
@@ -269,7 +290,7 @@ Version 0.3 (logic layer) + early 3D prototype. Systems scaffolded in GDScript:
 
 ---
 
-## 12. GUIDING QUESTIONS FOR EVERY FEATURE
+## 11. GUIDING QUESTIONS FOR EVERY FEATURE
 
 Before adding any mechanic, system, visual, or piece of content, ask:
 
@@ -288,13 +309,13 @@ If a feature fails questions 1, 2, and 4, reconsider it.
 
 ---
 
-## 13. PERFORMANCE ARCHITECTURE — Rules for Scale
+## 12. PERFORMANCE ARCHITECTURE — Rules for Scale
 
 *This section is binding for all technical decisions. Every new system, asset, or mechanic must be evaluated against these rules before implementation. When in doubt, refer here first.*
 
 ---
 
-### 13.1 Understanding the Three Bottlenecks
+### 12.1 Understanding the Three Bottlenecks
 
 The game runs on three hardware resources. Each has a different job and a different failure mode. Knowing which one a system strains determines how to build it correctly.
 
@@ -309,7 +330,7 @@ RAM holds everything currently loaded — meshes, textures, scene nodes, audio, 
 
 ---
 
-### 13.2 The Fundamental Rule — Simulate vs Render
+### 12.2 The Fundamental Rule — Simulate vs Render
 
 **The most important architectural decision in this game:**
 
@@ -336,7 +357,7 @@ A buffalo herd 3km from the player is real — it grazes, affects grass coverage
 
 ---
 
-### 13.3 The Herd Instinct Model — How Animals Work
+### 12.3 The Herd Instinct Model — How Animals Work
 
 Animals in this game are rendered individually but think collectively. This is both the performance solution and the authentic biological model.
 
@@ -378,7 +399,7 @@ Wild dog packs and lion prides use a modified herd brain — a pack brain — bu
 
 ---
 
-### 13.4 The LOD Ladder — Behaviour and Visual
+### 12.4 The LOD Ladder — Behaviour and Visual
 
 Every herd and every animal has LOD states for both what it does and how it looks. These are managed separately but trigger at similar distances.
 
@@ -404,7 +425,7 @@ Godot's `GeometryInstance3D` LOD distance settings and `VisibilityNotifier3D` ha
 
 ---
 
-### 13.5 Instancing Rules — Non-Negotiable
+### 12.5 Instancing Rules — Non-Negotiable
 
 Any object that appears more than once in the world must use `MultiMeshInstance3D`. This is not optional.
 
@@ -419,7 +440,7 @@ Variety is the enemy of the GPU. Where visual variety is needed — different an
 
 ---
 
-### 13.6 Chunk Rules — What Lives Where
+### 12.6 Chunk Rules — What Lives Where
 
 The `WorldChunkStreamer` is the gatekeeper for all visual content in the 3D world. These rules govern ownership:
 
@@ -432,7 +453,7 @@ The `WorldChunkStreamer` is the gatekeeper for all visual content in the 3D worl
 
 ---
 
-### 13.7 Asset Rules — GLB and Texture Guidelines
+### 12.7 Asset Rules — GLB and Texture Guidelines
 
 **Meshes (GLB)**
 - All tree, animal, rock, and vegetation meshes must be GLB format
@@ -455,7 +476,7 @@ The `WorldChunkStreamer` is the gatekeeper for all visual content in the 3D worl
 
 ---
 
-### 13.8 C# Code Performance Rules
+### 12.8 C# Code Performance Rules
 
 - Never run heavy simulation logic in `_Process()` (called every frame). Simulation belongs in the TimeSystem tick — daily or monthly. `_Process()` is for visual updates only
 - Use C# **structs** for individual animal data (value types stored contiguously in memory, cache-friendly for iteration)
@@ -467,7 +488,7 @@ The `WorldChunkStreamer` is the gatekeeper for all visual content in the 3D worl
 
 ---
 
-### 13.9 The Performance Budget (Target Hardware: Mid-Range PC, ~2021)
+### 12.9 The Performance Budget (Target Hardware: Mid-Range PC, ~2021)
 
 | Metric | Target |
 |---|---|
@@ -490,11 +511,11 @@ These are warning lines, not hard ceilings. Exceed them during development and i
 - Home and lodge building pieces are instanced per component type
 - Roads are terrain texture blends — no separate mesh, no additional draw calls
 
-The 300 target is still aggressive. Any system that naively spawns unique nodes per-entity will blow through it immediately. The instancing rules in Section 13.5 are non-negotiable and become more important, not less, as scope grows.
+The 300 target is still aggressive. Any system that naively spawns unique nodes per-entity will blow through it immediately. The instancing rules in Section 12.5 are non-negotiable and become more important, not less, as scope grows.
 
 ---
 
-### 13.10 What Low Poly Actually Buys You
+### 12.10 What Low Poly Actually Buys You
 
 Low poly reduces **VRAM per mesh** and **GPU work per draw call**. It does not:
 - Reduce draw call count — instancing does that
@@ -505,7 +526,7 @@ Low poly is one necessary layer in a complete performance strategy. Protect it. 
 
 ---
 
-### 13.11 Why C# and Not GDScript
+### 12.11 Why C# and Not GDScript
 
 C# compiles to native code via the .NET runtime. On CPU-bound work — iterating over hundreds of animal structs, running genetics calculations, generating terrain chunks — it runs roughly 3 to 10 times faster than interpreted GDScript. At the scale of this game, with a living world across thousands of hectares, that headroom is not optional.
 
@@ -515,13 +536,13 @@ Mixing both languages in the same Godot 4 project is fully supported. C# systems
 
 ---
 
-## 14. PLAYER EXPERIENCE DESIGN — Tension, Agency, Clarity, Progression, Resolution
+## 13. PLAYER EXPERIENCE DESIGN — Tension, Agency, Clarity, Progression, Resolution
 
 *This section defines how the player should feel during play — not what mechanics exist, but what the player experiences emotionally and cognitively at every stage. Every system, feature, and event in the game should be evaluated against these five dimensions. If a new mechanic scores zero across all five, reconsider it.*
 
 ---
 
-### 14.1 Tension — What Pushes Back
+### 13.1 Tension — What Pushes Back
 
 The land does not want to be a game reserve. It does not want to be anything. It is indifferent. The player's ambition is what creates the tension — the gap between what you want this place to become and what it actually is. Africa is the antagonist. Not a villain. Not a punishing game master. Simply a force that does not care about your plans.
 
@@ -565,7 +586,7 @@ Government disease control zones, market price fluctuations, and neighbouring fa
 
 ---
 
-### 14.2 Agency — The Player Is Always Authoring
+### 13.2 Agency — The Player Is Always Authoring
 
 The player of BasterBoer is an author, not an executor. Every meaningful decision they make is an act of authorship over their land and the story it tells.
 
@@ -587,7 +608,7 @@ When external forces arrive — drought, disease, government decisions — they 
 
 ---
 
-### 14.3 Clarity — The Player Always Knows What Needs Attention
+### 13.3 Clarity — The Player Always Knows What Needs Attention
 
 BasterBoer has no objectives screen. No quest log. No achievement checklist. And yet the player should never feel lost about what to do *right now*. These two things are not in conflict. The clarity comes from the farm itself.
 
@@ -611,7 +632,7 @@ Oom Fasie arrives when something is worth noticing. Not always when the player w
 
 ---
 
-### 14.4 Progression — The Farm Proves the Journey
+### 13.4 Progression — The Farm Proves the Journey
 
 Progression in BasterBoer is not tracked by a number. It is visible in the land, felt in the relationships, and heard in the world. The farm at year five should look, sound, and operate differently from the farm at year one — not because a progress bar filled, but because the player made ten thousand small decisions that accumulated into something real.
 
@@ -641,7 +662,7 @@ The early, mid, and late game are not phases in a tutorial flow. They are genuin
 
 ---
 
-### 14.5 Resolution — The Moments That Let the Player Exhale
+### 13.5 Resolution — The Moments That Let the Player Exhale
 
 A game without a win condition still needs resolution. Not at the macro level — the farm is never finished, the journey never ends — but at the micro level, where chapters close and the player feels the weight of what just happened. BasterBoer builds resolution through three structures.
 
