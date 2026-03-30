@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/Water/WaterPointRenderer.cs" id="1_renderer"]
+[ext_resource type="Script" path="res://Scripts/Water/WaterInteraction.cs" id="2_interaction"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(10, 3, 10)
+
+[node name="Dam" type="Node3D"]
+script = ExtResource("1_renderer")
+SourceType = 0
+
+[node name="InteractionArea" type="Area3D" parent="."]
+script = ExtResource("2_interaction")
+
+[node name="CollisionShape" type="CollisionShape3D" parent="InteractionArea"]
+shape = SubResource("BoxShape3D_1")

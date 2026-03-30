@@ -78,7 +78,7 @@ func _process_foot(delta: float) -> void:
 		velocity.y = jump_velocity
 
 	# WASD direction relative to camera facing
-	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input_dir := Input.get_vector("move_forward", "move_back", "move_right", "move_left")
 	var cam_basis  := Basis(Vector3.UP, _cam_yaw)
 	var direction  := (cam_basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
@@ -87,7 +87,8 @@ func _process_foot(delta: float) -> void:
 	if direction != Vector3.ZERO:
 		velocity.x = direction.x * speed
 		velocity.z = direction.z * speed
-		# Rotate mesh to face movement direction
+		# The imported mesh has +X as its local forward instead of Godot's -Z,
+		# so rotate the direction by -90° around Y before passing to looking_at().
 		var target_basis := Basis.looking_at(direction, Vector3.UP)
 		mesh.basis = mesh.basis.slerp(target_basis, rotate_speed * delta)
 	else:

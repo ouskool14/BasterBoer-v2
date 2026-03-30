@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://UI/HUD/AlertPanel.gd" id="1_alertpanel"]
+
+[node name="AlertPanel" type="PanelContainer"]
+offset_left = 700.0
+offset_top = 40.0
+offset_right = 1050.0
+offset_bottom = 300.0
+script = ExtResource("1_alertpanel")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Title" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="VBox/Title"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "⚠ ALERTS"
+
+[node name="CloseButton" type="Button" parent="VBox/Title"]
+layout_mode = 2
+text = "✕"
+custom_minimum_size = Vector2(24, 0)
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 200)
+
+[node name="AlertList" type="VBoxContainer" parent="VBox/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3

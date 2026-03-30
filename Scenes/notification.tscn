@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://c3notification000001"]
+[gd_scene format=3 uid="uid://bevh0tsb0i1ya"]
 
 [ext_resource type="Script" path="res://Scripts/notification.gd" id="1_notif"]
 

@@ -47,10 +47,27 @@ not optional — skills contain rules that cannot be violated.
 
 ---
 
+## Model Reference
+> These are the intended OpenRouter free models for each agent.
+> Models are configured in Kilo Code Settings UI — not read from this file.
+> Free tier rate limit: 200 requests/day, 20 requests/minute per model.
+> Be surgical with context — feed only the relevant file(s) + the required SKILL.md(s).
+
+| Agent | OpenRouter Model ID |
+|-------|-------------------|
+| orchestrator | `nvidia/nemotron-3-super-120b-a12b:free` |
+| architect (plan) | `openai/gpt-oss-120b:free` |
+| code | `qwen/qwen3-coder:free` |
+| gdscript | `deepseek/deepseek-chat-v3-0324:free` |
+| debug | `deepseek/deepseek-r1:free` |
+| docs | `mistralai/mistral-small-3.1-24b-instruct:free` |
+
+---
+
 ## Agents
 
 ### orchestrator
-**Model:** `nvidia/nemotron-3-super-120b:free`
+**Intended model:** `nvidia/nemotron-3-super-120b-a12b:free`
 **Read before every task:**
 - `skills/basterboer-simulation/SKILL.md`
 - `skills/basterboer-performance/SKILL.md`
@@ -58,13 +75,13 @@ not optional — skills contain rules that cannot be violated.
 **Role:** Top-level task decomposition, cross-system planning, delegating subtasks to specialist agents.
 **Use for:** Breaking large features into C# + GDScript subtasks, resolving conflicts between systems,
 long-horizon planning across AnimalSystem / EconomySystem / WorldMap.
-**Context:** 1M token window. Always read GAME_VISION and ARCHITECTURE.md before planning any cross-system feature.
 **Rule:** Every plan must name which agent handles each subtask and which skill files that agent must read first.
+Always read `GAME_VISION v0.6.md` and `docs/ARCHITECTURE.md` before planning any cross-system feature.
 
 ---
 
 ### architect
-**Model:** `openai/gpt-oss-120b:free`
+**Intended model:** `openai/gpt-oss-120b:free` — configured as the **Plan** mode in Kilo Code Settings.
 **Read before every task:**
 - `skills/basterboer-simulation/SKILL.md`
 - `skills/basterboer-performance/SKILL.md`
@@ -73,12 +90,12 @@ long-horizon planning across AnimalSystem / EconomySystem / WorldMap.
 **Use for:** Designing new C# systems, reviewing performance budgets, ensuring the simulate/render
 separation is maintained, evaluating new features against the performance budget.
 **Rule:** No system design is valid if it violates the simulate/render split or exceeds the draw call budget.
-Reject and redesign before passing to the code agent.
+Reject and redesign before passing to the code agent. Plan mode disallows edits — use it for design only.
 
 ---
 
 ### code
-**Model:** `qwen/qwen3-coder-480b-a35b-instruct:free`
+**Intended model:** `qwen/qwen3-coder:free`
 **Read before every task:**
 - `skills/godot4-csharp/SKILL.md`
 - `skills/basterboer-simulation/SKILL.md`
@@ -87,7 +104,8 @@ Reject and redesign before passing to the code agent.
 **Role:** C# simulation layer — the primary coding agent.
 **Use for:** AnimalSystem, BreedingSystem, FloraSystem, EconomySystem, FenceSystem,
 WaterSystem, FireSystem, WorldChunkStreamer, GameState, and all simulation logic.
-**Context:** 262K token window — feed full file context.
+**Context note:** Feed only the specific C# file being worked on + the required SKILL.md files.
+Do not dump the entire project into context — free tier limits apply.
 **Rules:**
 - Simulation classes have zero Godot API imports
 - Use `readonly struct` for per-animal data, `class` for herd brains
@@ -100,7 +118,7 @@ WaterSystem, FireSystem, WorldChunkStreamer, GameState, and all simulation logic
 ---
 
 ### gdscript
-**Model:** `deepseek/deepseek-v3.2:free`
+**Intended model:** `deepseek/deepseek-chat-v3-0324:free`
 **Read before every task:**
 - `skills/godot4-csharp/SKILL.md` (sections 5, 11 — signals and interop)
 
@@ -116,7 +134,7 @@ and GDScript that calls into C# systems via GameState.
 ---
 
 ### debug
-**Model:** `deepseek/deepseek-r1:free`
+**Intended model:** `deepseek/deepseek-r1:free`
 **Read before every task:**
 - `skills/godot4-csharp/SKILL.md` (section 10 — common pitfalls)
 - `skills/basterboer-performance/SKILL.md`
@@ -124,8 +142,8 @@ and GDScript that calls into C# systems via GameState.
 **Role:** Reasoning-first bug diagnosis and performance investigation.
 **Use for:** Frame rate issues, incorrect simulation outputs, herd behaviour bugs,
 chunk streaming errors, threading race conditions, incorrect ZAR calculations.
-**Process:** Always reason through the problem fully before proposing a fix.
-Always ask for: the full error or symptom, the relevant system file(s),
+**Process:** Reason through the problem fully before proposing a fix.
+Always provide: the full error or symptom, the relevant system file(s),
 and the last change made before the issue appeared.
 **Common causes to check first:**
 - `GetNode()` called before `_Ready()` → NullReferenceException
@@ -137,7 +155,7 @@ and the last change made before the issue appeared.
 ---
 
 ### docs
-**Model:** `mistralai/mistral-small-3.1-24b-instruct:free`
+**Intended model:** `mistralai/mistral-small-3.1-24b-instruct:free`
 **Read before every task:**
 - `skills/basterboer-simulation/SKILL.md` (section 2 — system ownership map)
 
@@ -162,7 +180,7 @@ C# APIs, summarising system interactions, generating changelog entries.
 | Task | Agent | Skills Read |
 |------|-------|-------------|
 | Plan a new game system end-to-end | orchestrator | simulation + performance |
-| Design a C# class architecture | architect | simulation + performance |
+| Design a C# class architecture | architect (plan mode) | simulation + performance |
 | Write / refactor C# simulation code | code | all three |
 | Write / fix GDScript or scene logic | gdscript | godot4-csharp (signals + interop) |
 | Diagnose a bug or performance issue | debug | godot4-csharp (pitfalls) + performance |
@@ -170,3 +188,17 @@ C# APIs, summarising system interactions, generating changelog entries.
 | Cross-system feature (e.g. fire + ecology + economy) | orchestrator → architect → code | all three |
 | New visual system (e.g. ambient wildlife) | architect → code | all three |
 | Chunk streaming issue | debug | all three |
+
+---
+
+## Kilo Code Settings — One-Time Setup Checklist
+> Do this once in Kilo Code Settings UI. Models stick per-agent after first use.
+
+- [ ] **Orchestrator** mode → set model to `nvidia/nemotron-3-super-120b-a12b:free`
+- [ ] **Plan** (Architect) mode → set model to `openai/gpt-oss-120b:free`
+- [ ] **Code** mode → set model to `qwen/qwen3-coder:free`
+- [ ] **GDScript** custom agent → set model to `deepseek/deepseek-chat-v3-0324:free`
+- [ ] **Debug** mode → set model to `deepseek/deepseek-r1:free`
+- [ ] **Docs** custom agent → set model to `mistralai/mistral-small-3.1-24b-instruct:free`
+- [ ] OpenRouter API key entered under Providers
+- [ ] Skills folder committed to repo root alongside this file

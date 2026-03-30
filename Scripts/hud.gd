@@ -6,8 +6,6 @@ extends CanvasLayer
 @onready var financial_summary = $"FinancialSummary"
 @onready var balance_label = $"FinancialSummary/BalanceLabel"
 @onready var income_expense_arrow = $"FinancialSummary/IncomeExpenseArrow"
-@onready var compass = $"Compass"
-@onready var compass_bar = $"Compass/CompassBar"
 @onready var interact_prompt = $"InteractPrompt"
 @onready var prompt_label = $"InteractPrompt/PromptLabel"
 @onready var notification_system_container = $"NotificationSystem"
@@ -25,10 +23,21 @@ var active_notifications = []
 const MAX_NOTIFICATIONS = 3
 
 func _ready():
-	# Get references to C# singletons (autoloads or scene nodes)
-	_game_state = get_node_or_null("/root/GameState")
-	_time_system = get_node_or_null("/root/TimeSystem")
-	_economy_system = get_node_or_null("/root/EconomySystem")
+	# Get references through Bootstrap (the central system registry)
+	var bootstrap = get_node_or_null("/root/Bootstrap")
+	if bootstrap:
+		_game_state = bootstrap.get("Game")
+		_time_system = bootstrap.get("Time")
+		_economy_system = bootstrap.get("Economy")
+	
+	# Fallback: try direct paths for backwards compatibility
+	if not _game_state:
+		_game_state = get_node_or_null("/root/GameState")
+	if not _time_system:
+		_time_system = get_node_or_null("/root/TimeSystem")
+	if not _economy_system:
+		_economy_system = get_node_or_null("/root/EconomySystem")
+	
 	_player = get_tree().root.find_child("Boer", true, false)
 
 	# Connect signals from TimeSystem
@@ -64,7 +73,6 @@ func _ready():
 	financial_summary.set_meta("fade_timer", financial_timer)
 
 func _process(_delta):
-	update_compass()
 	update_interact_prompt()
 	update_vehicle_hud()
 
@@ -118,14 +126,6 @@ func format_currency(value: float) -> String:
 	# Add decimals
 	var decimals = fmod(abs(value), 1.0) * 100
 	return result + ".%02d" % int(decimals)
-
-func update_compass():
-	if _player:
-		var camera = _player.get_node_or_null("SpringArm3D/Camera3D")
-		if camera:
-			var forward_vector = -camera.global_transform.basis.z
-			var angle = atan2(forward_vector.x, forward_vector.z)
-			compass_bar.rotation = angle
 
 func update_interact_prompt():
 	if _player and _player.has_method("get_interactable_object"):

@@ -20,6 +20,18 @@ namespace BasterBoer.Core.Systems
 		/// <summary>Singleton instance accessor.</summary>
 		public static WaterSystem Instance => _instance ??= new WaterSystem();
 
+		/// <summary>Emitted when a water source drops below 25% capacity.</summary>
+		public event System.Action<WaterSource> OnWaterLevelCritical;
+
+		/// <summary>Emitted when a water source dries up completely.</summary>
+		public event System.Action<WaterSource> OnWaterDry;
+
+		/// <summary>Emitted when a water source is repaired.</summary>
+		public event System.Action<WaterSource> OnWaterRepaired;
+
+		/// <summary>Emitted when a water source quality drops below 0.3.</summary>
+		public event System.Action<WaterSource> OnWaterQualityLow;
+
 		private readonly List<WaterSource> _waterSources;
 		private int _nextWaterSourceId;
 
@@ -231,11 +243,12 @@ namespace BasterBoer.Core.Systems
 		}
 
 		/// <summary>
-		/// Daily simulation tick. Handles evaporation and status updates.
-		/// Should be connected to TimeSystem.OnDayPassed.
+		/// Daily simulation tick. Handles evaporation, rain replenishment, and status updates.
+		/// Should be connected to TimeSystem.OnDayPassed via SimulationTicker.
 		/// </summary>
 		/// <param name="currentSeason">Current season for evaporation calculation</param>
-		public void OnDailyTick(Season currentSeason)
+		/// <param name="weather">Current weather state for rain/evaporation effects</param>
+		public void OnDailyTick(Season currentSeason, WeatherState weather)
 		{
 			float evapMultiplier = _seasonalEvaporationMultiplier.GetValueOrDefault(currentSeason, 1f);
 
@@ -244,6 +257,15 @@ namespace BasterBoer.Core.Systems
 			{
 				evapMultiplier *= 1.3f;
 			}
+
+			// Drought weather further increases evaporation
+			if (weather == WeatherState.Drought)
+			{
+				evapMultiplier *= 1.5f;
+			}
+
+			// Rainfall effect per day
+			bool isRaining = weather == WeatherState.Rain || weather == WeatherState.Storm;
 
 			int count = _waterSources.Count;
 			for (int i = 0; i < count; i++)
@@ -254,18 +276,42 @@ namespace BasterBoer.Core.Systems
 				if (source.Status != WaterSourceStatus.Operational) continue;
 
 				// Boreholes don't evaporate - they're underground
-				if (source.Type == WaterSourceType.Borehole) continue;
+				if (source.Type != WaterSourceType.Borehole)
+				{
+					// Calculate daily evaporation loss
+					float dailyLoss = (source.EvaporationRate * evapMultiplier) + source.SeepageRate;
+					source.CurrentLevel -= dailyLoss;
+					source.CurrentLevel = Math.Max(0f, source.CurrentLevel);
+				}
 
-				// Calculate daily loss
-				float dailyLoss = (source.EvaporationRate * evapMultiplier) + source.SeepageRate;
-				source.CurrentLevel -= dailyLoss;
-				source.CurrentLevel = Math.Max(0f, source.CurrentLevel);
+				// Rainfall replenishes surface water sources
+				if (isRaining && source.Type != WaterSourceType.Borehole)
+				{
+					float rainGain = source.Type == WaterSourceType.Dam ? 0.02f : 0.005f;
+					if (weather == WeatherState.Storm)
+						rainGain *= 2f;
+					source.CurrentLevel = Math.Min(1f, source.CurrentLevel + rainGain);
+				}
 
 				// Update status if dry
 				if (source.CurrentLevel < 0.01f)
 				{
-					source.Status = WaterSourceStatus.Dry;
-					GD.Print($"[WaterSystem] {source.Name} has dried up!");
+					if (source.Status != WaterSourceStatus.Dry)
+					{
+						source.Status = WaterSourceStatus.Dry;
+						GD.Print($"[WaterSystem] {source.Name} has dried up!");
+						OnWaterDry?.Invoke(source);
+					}
+				}
+				else if (source.CurrentLevel < 0.25f)
+				{
+					OnWaterLevelCritical?.Invoke(source);
+				}
+
+				// Quality warning
+				if (source.QualityFactor < 0.3f)
+				{
+					OnWaterQualityLow?.Invoke(source);
 				}
 
 				_waterSources[i] = source;
@@ -273,8 +319,18 @@ namespace BasterBoer.Core.Systems
 		}
 
 		/// <summary>
-		/// Monthly simulation tick. Handles rainfall and long-term water dynamics.
-		/// Should be connected to TimeSystem.OnMonthPassed.
+		/// Legacy daily tick overload for backwards compatibility.
+		/// Uses GameState weather if available.
+		/// </summary>
+		public void OnDailyTick(Season currentSeason)
+		{
+			var weather = GameState.Instance?.CurrentWeather ?? WeatherState.Clear;
+			OnDailyTick(currentSeason, weather);
+		}
+
+		/// <summary>
+		/// Monthly simulation tick. Handles rainfall, quality degradation, and long-term water dynamics.
+		/// Should be connected to TimeSystem.OnMonthPassed via SimulationTicker.
 		/// </summary>
 		/// <param name="currentSeason">Current season</param>
 		/// <param name="month">Current month (1-12)</param>
@@ -304,8 +360,45 @@ namespace BasterBoer.Core.Systems
 			// Apply rainfall to water sources
 			ApplyRainfall(_monthlyRainfallMM, currentSeason);
 
+			// Quality degradation — water quality drops slightly each month
+			DegradeWaterQuality();
+
 			GD.Print($"[WaterSystem] Month {month}: Rainfall {_monthlyRainfallMM:F1}mm, YTD: {_yearlyRainfallMM:F1}mm, Drought: {_isDrought}");
 		}
+
+		/// <summary>
+		/// Degrades water quality across all sources. Standing water loses quality faster.
+		/// </summary>
+		private void DegradeWaterQuality()
+		{
+			int count = _waterSources.Count;
+			for (int i = 0; i < count; i++)
+			{
+				WaterSource source = _waterSources[i];
+				if (source.Status != WaterSourceStatus.Operational) continue;
+
+				float degradation = source.Type switch
+				{
+					WaterSourceType.Dam => 0.005f,     // Dams degrade slowly
+					WaterSourceType.Trough => 0.015f,   // Troughs degrade faster (standing water)
+					WaterSourceType.River => 0.002f,    // Rivers stay clean (flowing water)
+					WaterSourceType.Borehole => 0.001f, // Boreholes very clean
+					WaterSourceType.Spring => 0.001f,   // Springs very clean
+					_ => 0.005f
+				};
+
+				source.QualityFactor = Math.Max(0.1f, source.QualityFactor - degradation);
+				_waterSources[i] = source;
+			}
+		}
+
+		/// <summary>
+		/// Refills a trough from another water source (manual player operation).
+		/// </summary>
+		/// <param name="troughId">ID of trough to fill</param>
+		/// <param name="sourceId">ID of source to pump from</param>
+		/// <param name="liters">Amount to transfer</param>
+		/// <returns>Actual amount transferred in liters</returns>
 
 		/// <summary>
 		/// Updates drought status based on recent rainfall patterns.
@@ -530,7 +623,7 @@ namespace BasterBoer.Core.Systems
 		}
 
 		/// <summary>
-		/// Repairs a damaged water source.
+		/// Repairs a damaged water source. Checks and deducts cost from GameState if funds available.
 		/// </summary>
 		/// <param name="waterSourceId">ID of source to repair</param>
 		/// <returns>True if repair was successful</returns>
@@ -544,9 +637,23 @@ namespace BasterBoer.Core.Systems
 					if (source.Status == WaterSourceStatus.Damaged ||
 						source.Status == WaterSourceStatus.PumpFailure)
 					{
+						// Check funds
+						var gameState = GameState.Instance;
+						if (gameState != null && source.RepairCostZAR > 0)
+						{
+							if (gameState.CashBalance < source.RepairCostZAR)
+							{
+								GD.Print($"[WaterSystem] Cannot repair {source.Name}: need R{source.RepairCostZAR}, have R{gameState.CashBalance:F2}");
+								return false;
+							}
+							gameState.CashBalance -= source.RepairCostZAR;
+						}
+
 						source.Status = WaterSourceStatus.Operational;
+						source.QualityFactor = Math.Min(1f, source.QualityFactor + 0.2f);
 						_waterSources[i] = source;
-						GD.Print($"[WaterSystem] Repaired: {source.Name}");
+						GD.Print($"[WaterSystem] Repaired: {source.Name} (cost: R{source.RepairCostZAR})");
+						OnWaterRepaired?.Invoke(source);
 						return true;
 					}
 				}

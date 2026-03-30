@@ -35,6 +35,211 @@ public partial class AnimalRenderer : Node3D
 	private readonly Dictionary<Species, Mesh> _speciesMeshes = new();
 	private Node3D _player;
 
+	// ============================================================================
+	// INTERPOLATION STATE CACHE (Gate 1)
+	// ============================================================================
+
+	// Keyed by HerdId (whatever identifier HerdBrain exposes — int, Guid, or string)
+	private Dictionary<int, HerdRenderState> _herdRenderStates = new();
+
+	// Keyed by AnimalStruct.UniqueId
+	private Dictionary<ulong, AnimalRenderState> _animalRenderStates = new();
+
+	// Constant blend duration for individual offset changes
+	private const float OffsetShuffleDuration = 0.35f;
+
+	// Maximum plausible jump distance before we snap instead of interpolate.
+	// If a herd center moves more than this between sim samples, skip the blend.
+	// Set to: maxAnimalSpeed (m/s) × longestLODInterval (s) × safetyMultiplier
+	// Example: 8 m/s × 1.0 s × 2.5 = 20 m
+	private const float SnapThreshold = 20f;
+
+	/// <summary>
+	/// Updates the interpolation state for a herd and returns the smoothed state.
+	/// This method implements Tier A interpolation (herd center and yaw) with linear blending.
+	/// </summary>
+	/// <param name="herd">The herd to update interpolation for</param>
+	/// <param name="delta">Time since last frame in seconds</param>
+	/// <returns>The updated herd render state</returns>
+	private HerdRenderState UpdateHerdRenderState(HerdBrain herd, float delta)
+	{
+		int id = herd.HerdId;
+
+		if (!_herdRenderStates.TryGetValue(id, out HerdRenderState state))
+		{
+			// First time we have seen this herd — snap to current sim position, no blend
+			state = new HerdRenderState
+			{
+				RenderCenter       = herd.CenterPosition,
+				TargetCenter       = herd.CenterPosition,
+				PreviousCenter     = herd.CenterPosition,
+				CenterBlendElapsed = 1f,
+				CenterBlendDuration= 1f,
+				RenderYaw          = GetYawFromDirection(herd.MovementDirection),
+				TargetYaw          = GetYawFromDirection(herd.MovementDirection),
+				YawBlendElapsed    = 1f,
+				YawBlendDuration   = 1f,
+				Initialised        = true
+			};
+			_herdRenderStates[id] = state;
+			return state;
+		}
+
+		// --- Detect sim center change ---
+		if (!IsApproxEqual(state.TargetCenter, herd.CenterPosition))
+		{
+			float jumpDistance = state.TargetCenter.DistanceTo(herd.CenterPosition);
+
+			if (jumpDistance > SnapThreshold)
+			{
+				// Large jump: teleport / LOD transition / just entered render range
+				// Snap immediately — do not interpolate across half the map
+				state.RenderCenter       = herd.CenterPosition;
+				state.TargetCenter       = herd.CenterPosition;
+				state.PreviousCenter     = herd.CenterPosition;
+				state.CenterBlendElapsed = 1f;
+				state.CenterBlendDuration= 1f;
+			}
+			else
+			{
+				// Normal sim update — start a new blend segment
+				state.PreviousCenter     = state.RenderCenter; // start from wherever we currently are
+				state.TargetCenter       = herd.CenterPosition;
+				state.CenterBlendElapsed = 0f;
+
+				// Use the LOD update interval as the blend duration so we finish
+				// exactly as the next sim update is expected to arrive.
+				state.CenterBlendDuration = BehaviourLODHelper.GetUpdateInterval(herd.CurrentLOD);
+				// Clamp to a sensible range in case LOD interval is very short or very long
+				state.CenterBlendDuration = Mathf.Clamp(state.CenterBlendDuration, 0.05f, 1.5f);
+			}
+		}
+
+		// --- Detect yaw change ---
+		float simYaw = GetYawFromDirection(herd.MovementDirection);
+		if (!Mathf.IsEqualApprox(state.TargetYaw, simYaw, 0.0001f))
+		{
+			state.TargetYaw       = simYaw;
+			state.YawBlendElapsed = 0f;
+			state.YawBlendDuration= state.CenterBlendDuration; // keep in sync with center
+		}
+
+		// --- Advance blend timers ---
+		state.CenterBlendElapsed = Mathf.Min(state.CenterBlendElapsed + delta, state.CenterBlendDuration);
+		state.YawBlendElapsed    = Mathf.Min(state.YawBlendElapsed    + delta, state.YawBlendDuration);
+
+		// --- Compute interpolated values with easing (Gate 2) ---
+		float centerT = (state.CenterBlendDuration > 0f)
+			? state.CenterBlendElapsed / state.CenterBlendDuration
+			: 1f;
+		float yawT = (state.YawBlendDuration > 0f)
+			? state.YawBlendElapsed / state.YawBlendDuration
+			: 1f;
+
+		// Apply ease-out smoothing
+		float smoothedCenterT = EaseOut(centerT);
+		float smoothedYawT    = EaseOut(yawT);
+
+		state.RenderCenter = state.PreviousCenter.Lerp(state.TargetCenter, smoothedCenterT);
+		state.RenderYaw    = LerpAngle(state.RenderYaw, state.TargetYaw, smoothedYawT);
+
+		_herdRenderStates[id] = state;
+		return state;
+	}
+
+	/// <summary>
+	/// Helper to extract yaw angle (in radians) from a direction vector.
+	/// Returns 0 if direction is too small.
+	/// </summary>
+	private float GetYawFromDirection(Vector3 direction)
+	{
+		if (direction.LengthSquared() < 0.0001f)
+			return 0f;
+		
+		Vector3 horizontal = direction;
+		horizontal.Y = 0f;
+		return Mathf.Atan2(horizontal.X, horizontal.Z);
+	}
+
+	/// <summary>
+	/// Helper to check if two vectors are approximately equal.
+	/// </summary>
+	private bool IsApproxEqual(Vector3 a, Vector3 b)
+	{
+		return (a - b).LengthSquared() < 0.0001f;
+	}
+
+	/// <summary>
+	/// Smoothstep ease-out. Input t must be in [0, 1].
+	/// Makes motion decelerate into the target rather than arriving linearly.
+	/// </summary>
+	private static float EaseOut(float t)
+	{
+		t = Mathf.Clamp(t, 0f, 1f);
+		return t * (2f - t); // quadratic ease-out
+	}
+
+	/// <summary>
+	/// Interpolates between two angles (in radians), taking the shortest arc.
+	/// t must be in [0, 1].
+	/// </summary>
+	private static float LerpAngle(float from, float to, float t)
+	{
+		float diff = Mathf.Wrap(to - from, -Mathf.Pi, Mathf.Pi);
+		return from + diff * t;
+	}
+
+	/// <summary>
+	/// Updates the interpolation state for an individual animal and returns the smoothed state.
+	/// This method implements Tier B interpolation (individual offset smoothing).
+	/// </summary>
+	/// <param name="animal">The animal to update interpolation for</param>
+	/// <param name="delta">Time since last frame in seconds</param>
+	/// <returns>The updated animal render state</returns>
+	private AnimalRenderState UpdateAnimalRenderState(ref AnimalStruct animal, float delta)
+	{
+		ulong uid = animal.UniqueId;
+
+		if (!_animalRenderStates.TryGetValue(uid, out AnimalRenderState state))
+		{
+			// First time we have seen this animal — snap to current sim position, no blend
+			state = new AnimalRenderState
+			{
+				RenderOffset       = animal.WorldPosition,
+				TargetOffset       = animal.WorldPosition,
+				PreviousOffset     = animal.WorldPosition,
+				OffsetBlendElapsed = OffsetShuffleDuration,
+				OffsetBlendDuration= OffsetShuffleDuration,
+				Initialised        = true
+			};
+			_animalRenderStates[uid] = state;
+			return state;
+		}
+
+		// Detect offset change (sim assigned a new spread position)
+		if (!IsApproxEqual(state.TargetOffset, animal.WorldPosition))
+		{
+			state.PreviousOffset     = state.RenderOffset;
+			state.TargetOffset       = animal.WorldPosition;
+			state.OffsetBlendElapsed = 0f;
+			// OffsetBlendDuration is constant — always OffsetShuffleDuration
+		}
+
+		// Advance
+		state.OffsetBlendElapsed = Mathf.Min(
+			state.OffsetBlendElapsed + delta,
+			state.OffsetBlendDuration
+		);
+
+		float t = state.OffsetBlendElapsed / state.OffsetBlendDuration;
+		t = EaseOut(t); // Apply easing for smooth deceleration
+
+		state.RenderOffset = state.PreviousOffset.Lerp(state.TargetOffset, t);
+
+		_animalRenderStates[uid] = state;
+		return state;
+	}
+
 	public override void _Ready()
 	{
 		// Initialize terrain heightmap (18KB for 4000m at 4m resolution)
@@ -136,6 +341,10 @@ public partial class AnimalRenderer : Node3D
 			visibleBySpecies[species] = new List<Transform3D>();
 		}
 
+		// Track visible herds and animals for cleanup
+		var visibleHerdIds = new HashSet<int>();
+		var visibleAnimalUids = new HashSet<ulong>();
+
 		// Iterate all herds and gather visible animal transforms
 		var herds = AnimalSystem.Instance.Herds;
 		int herdCount = herds.Count;
@@ -153,34 +362,46 @@ public partial class AnimalRenderer : Node3D
 			if (herdDistSq > maxDistSq)
 				continue;
 
-			// Add each living animal's world transform
+			// Mark this herd as visible
+			visibleHerdIds.Add(herd.HerdId);
+
+			// Add each living animal's world transform with interpolation (Gate 1 - Tier A only)
 			var animals = herd.Animals;
 			int animalCount = animals.Length;
 			var transforms = visibleBySpecies[herd.Species];
+
+			// Get smoothed herd center and yaw for this herd (Tier A interpolation)
+			HerdRenderState herdState = UpdateHerdRenderState(herd, (float)delta);
+
+			// Build the shared herd-level basis from smoothed yaw
+			Basis herdBasis = Basis.Identity;
+			if (herdState.RenderYaw != 0f) // Only apply rotation if yaw is non-zero
+			{
+				herdBasis = herdBasis.Rotated(Vector3.Up, herdState.RenderYaw);
+			}
 
 			for (int i = 0; i < animalCount; i++)
 			{
 				if (animals[i].Health <= 0f) continue;
 
-				// Absolute position = herd center + animal offset
-				Vector3 worldPos = herd.CenterPosition + animals[i].WorldPosition;
+				// Get smoothed individual offset for this animal (Tier B interpolation)
+				AnimalRenderState animalState = UpdateAnimalRenderState(ref animals[i], (float)delta);
 
-				// Snap Y to terrain (cached heightmap bilinear — not Perlin noise)
+				// Absolute position = smoothed herd center + smoothed animal offset
+				Vector3 worldPos = herdState.RenderCenter + animalState.RenderOffset;
+
+				// Snap Y to terrain from interpolated X/Z position
 				worldPos.Y = TerrainQuery.GetHeight(worldPos.X, worldPos.Z);
 
-				// Face the herd's movement direction (or forward if stationary)
-				Basis basis = Basis.Identity;
-				if (herd.MovementDirection.LengthSquared() > 0.01f)
-				{
-					Vector3 forward = herd.MovementDirection;
-					forward.Y = 0f;
-					float angle = Mathf.Atan2(forward.X, forward.Z);
-					basis = basis.Rotated(Vector3.Up, angle);
-				}
+				// Mark this animal as visible
+				visibleAnimalUids.Add(animals[i].UniqueId);
 
-				transforms.Add(new Transform3D(basis, worldPos));
+				transforms.Add(new Transform3D(herdBasis, worldPos));
 			}
 		}
+
+		// Clean up interpolation state for herds and animals that are no longer visible
+		CleanupRenderStates(visibleHerdIds, visibleAnimalUids);
 
 		// Update each species' MultiMesh with the collected transforms
 		foreach (var kvp in _meshNodes)
@@ -216,4 +437,79 @@ public partial class AnimalRenderer : Node3D
 			}
 		}
 	}
+
+	/// <summary>
+	/// Clean up interpolation state for herds and animals that are no longer visible.
+	/// </summary>
+	private void CleanupRenderStates(HashSet<int> visibleHerdIds, HashSet<ulong> visibleAnimalUids)
+	{
+		// Remove herd states for herds no longer visible
+		var herdIdsToRemove = new List<int>();
+		foreach (var kvp in _herdRenderStates)
+		{
+			if (!visibleHerdIds.Contains(kvp.Key))
+			{
+				herdIdsToRemove.Add(kvp.Key);
+			}
+		}
+		foreach (var id in herdIdsToRemove)
+		{
+			_herdRenderStates.Remove(id);
+		}
+
+		// Remove animal states for animals no longer visible
+		var animalUidsToRemove = new List<ulong>();
+		foreach (var kvp in _animalRenderStates)
+		{
+			if (!visibleAnimalUids.Contains(kvp.Key))
+			{
+				animalUidsToRemove.Add(kvp.Key);
+			}
+		}
+		foreach (var uid in animalUidsToRemove)
+		{
+			_animalRenderStates.Remove(uid);
+		}
+	}
+}
+
+// ============================================================================
+// INTERPOLATION STATE STRUCTURES (Gate 1)
+// ============================================================================
+
+/// <summary>
+/// Render-side interpolation state for a single herd.
+/// </summary>
+public struct HerdRenderState
+{
+	// Tier A — herd center
+	public Vector3 RenderCenter;          // what we are currently drawing
+	public Vector3 TargetCenter;          // where the sim says the herd is
+	public Vector3 PreviousCenter;        // where RenderCenter was when TargetCenter last changed
+	public float   CenterBlendElapsed;    // seconds since last target change
+	public float   CenterBlendDuration;   // how long to take to reach TargetCenter
+
+	// Tier A — movement direction / yaw
+	public float   RenderYaw;            // current rendered heading (radians)
+	public float   TargetYaw;
+	public float   YawBlendElapsed;
+	public float   YawBlendDuration;
+
+	// Validity
+	public bool    Initialised;          // false until first sim sample received
+}
+
+/// <summary>
+/// Render-side interpolation state for a single animal.
+/// </summary>
+public struct AnimalRenderState
+{
+	// Tier B — individual offset from herd center
+	public Vector3 RenderOffset;         // current rendered offset
+	public Vector3 TargetOffset;         // what the sim most recently assigned
+	public Vector3 PreviousOffset;       // offset at the time the target last changed
+	public float   OffsetBlendElapsed;
+	public float   OffsetBlendDuration;  // constant: use 0.35f as the default
+
+	public bool    Initialised;
 }

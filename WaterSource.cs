@@ -79,6 +79,13 @@ namespace BasterBoer.Core.Water
 		/// <summary>Chunk ID this water source belongs to (for streaming).</summary>
 		public int ChunkId;
 
+		/// <summary>Water quality factor from 0.0 (contaminated) to 1.0 (pristine).
+		/// Affects animal health when drinking. Degrades over time without maintenance.</summary>
+		public float QualityFactor;
+
+		/// <summary>Cost in ZAR to repair this water source when damaged.</summary>
+		public int RepairCostZAR;
+
 		/// <summary>
 		/// Returns current water volume in cubic meters.
 		/// </summary>
@@ -90,16 +97,18 @@ namespace BasterBoer.Core.Water
 		public readonly bool HasWater => CurrentLevel > 0.05f && Status == WaterSourceStatus.Operational;
 
 		/// <summary>
-		/// Returns water availability score (0-1) considering level and status.
-		/// Used by herds to evaluate water sources.
+		/// Returns water availability score (0-1) considering level, status, and quality.
+		/// Used by herds to evaluate water sources. Herds prefer high-capacity, high-quality sources.
 		/// </summary>
 		public readonly float GetAvailabilityScore()
 		{
 			if (Status != WaterSourceStatus.Operational) return 0f;
 			if (CurrentLevel < 0.05f) return 0f;
 
-			// Prefer fuller water sources
-			return CurrentLevel;
+			// Score weighted by both level and quality
+			float levelScore = CurrentLevel;
+			float qualityScore = QualityFactor;
+			return levelScore * 0.7f + qualityScore * 0.3f;
 		}
 
 		/// <summary>
@@ -121,7 +130,9 @@ namespace BasterBoer.Core.Water
 				Radius = Mathf.Sqrt(capacityM3 / 3f), // Rough radius estimate
 				BoreholeOutputLPH = 0f,
 				BoreholeDepthM = 0f,
-				ChunkId = -1
+				ChunkId = -1,
+				QualityFactor = 0.9f,
+				RepairCostZAR = 15000
 			};
 		}
 
@@ -144,7 +155,9 @@ namespace BasterBoer.Core.Water
 				Radius = 2f,
 				BoreholeOutputLPH = outputLPH,
 				BoreholeDepthM = depthM,
-				ChunkId = -1
+				ChunkId = -1,
+				QualityFactor = 0.95f,
+				RepairCostZAR = 45000
 			};
 		}
 
@@ -167,7 +180,9 @@ namespace BasterBoer.Core.Water
 				Radius = widthM / 2f,
 				BoreholeOutputLPH = 0f,
 				BoreholeDepthM = 0f,
-				ChunkId = -1
+				ChunkId = -1,
+				QualityFactor = 0.85f,
+				RepairCostZAR = 0
 			};
 		}
 
@@ -190,7 +205,9 @@ namespace BasterBoer.Core.Water
 				Radius = 1.5f,
 				BoreholeOutputLPH = 0f,
 				BoreholeDepthM = 0f,
-				ChunkId = -1
+				ChunkId = -1,
+				QualityFactor = 0.8f,
+				RepairCostZAR = 5000
 			};
 		}
 	}

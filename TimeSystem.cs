@@ -9,7 +9,7 @@ namespace BasterBoer.Core.Systems
 	/// </summary>
 	public partial class TimeSystem : Node
 	{
-		[Export] public float DayDurationSeconds = 600f; // 10 minutes per game day
+		[Export] public float DayDurationSeconds = 60f; // 1 minute per game day (fast for testing)
 		[Export] public bool AutoAdvanceTime = true;
 
 		/// <summary>Singleton instance for global access.</summary>
